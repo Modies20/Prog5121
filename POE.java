@@ -10,6 +10,8 @@ import static com.mycompany.poe.Login.registerPassword;
 import static com.mycompany.poe.Login.registerUserName;
 import com.mycompany.poe.Message;
 import javax.swing.JOptionPane;
+import java.util.*;
+import java.security.MessageDigest;
 
 /**
  *
@@ -55,16 +57,12 @@ import javax.swing.JOptionPane;
             );
             
             switch(input) {
-                case "1":
-                    sendMessages();
-                    break;
-                case "2":
-                    JOptionPane.showMessageDialog(null, "Coming Soon");
-                    break;
-                case "3":
-                    System.exit(0);
+                case "1" -> sendMessages();
+                case "2" -> JOptionPane.showMessageDialog(null, "Coming Soon");
+                case "3" -> System.exit(0);
             }
         }
+
     }
 
     private static boolean login() {
@@ -109,7 +107,142 @@ import javax.swing.JOptionPane;
                 "Recipient: " + recipient + "\n" +
                 "Message: " + content
             );
+}
+}
+Public class POE{
+   static ArrayList<Message> sentMessages = new ArrayList<>();
+    static ArrayList<Message> storedMessages = new ArrayList<>();
+    static ArrayList<Message> disregardedMessages = new ArrayList<>();
+    static ArrayList<String> messageHashes = new ArrayList<>();
+    static ArrayList<String> messageIDs = new ArrayList<>();
+
+    public static void main(String[] args) {
+        loadTestData();
+        Scanner scanner = new Scanner(System.in);
+
+        int choice;
+        do {
+            System.out.println("\nMenu:");
+            System.out.println("1. Display senders and recipients");
+            System.out.println("2. Display longest sent message");
+            System.out.println("3. Search by message ID");
+            System.out.println("4. Search all messages to recipient");
+            System.out.println("5. Delete by message hash");
+            System.out.println("6. Display full report");
+            System.out.println("0. Exit");
+            System.out.print("Choice: ");
+            choice = scanner.nextInt(); scanner.nextLine();
+
+            switch (choice) {
+                case 1 -> displaySendersRecipients();
+                case 2 -> displayLongestMessage();
+                case 3 -> searchByID(scanner);
+                case 4 -> searchByRecipient(scanner);
+                case 5 -> deleteByHash(scanner);
+                case 6 -> displayReport();
+            }
+        } while (choice != 0);
+    }
+
+    static void loadTestData() {
+        addMessage("+27834557896", "Did you get the cake?", "Sent");
+        addMessage("+27838884567", "Where are you? You are late! I have asked you to be on time.", "Stored");
+        addMessage("+27834484567", "Yohoooo, I am at your gate", "Disregard");
+        addMessage("0838884567", "It is dinner time!", "Sent");
+    }
+
+    static void addMessage(String recipient, String text, String flag) {
+        String id = UUID.randomUUID().toString();
+        String hash = sha256(text);
+        Message msg = new Message(recipient, text, id, hash);
+
+        switch (flag.toLowerCase()) {
+            case "sent" -> sentMessages.add(msg);
+            case "stored" -> storedMessages.add(msg);
+            case "disregard" -> disregardedMessages.add(msg);
+        }
+
+        messageHashes.add(hash);
+        messageIDs.add(id);
+    }
+
+    static void displaySendersRecipients() {
+        System.out.println("Senders and Recipients of Sent Messages:");
+        for (Message msg : sentMessages) {
+            System.out.println("Sender: System | Recipient: " + msg.getRecipient());
         }
     }
 
-    
+    static void displayLongestMessage() {
+        Message longest = sentMessages.stream().max(Comparator.comparingInt(m -> m.getText().length())).orElse(null);
+        if (longest != null)
+            System.out.println("Longest Message: " + longest.getText());
+    }
+
+    static void searchByID(Scanner sc) {
+        System.out.print("Enter message ID: ");
+        String id = sc.nextLine();
+        for (Message msg : sentMessages) {
+            if (msg.getId().equals(id)) {
+                System.out.println("Recipient: " + msg.getRecipient());
+                System.out.println("Message: " + msg.getText());
+                return;
+            }
+        }
+        System.out.println("Message ID not found.");
+    }
+
+    static void searchByRecipient(Scanner sc) {
+        System.out.print("Enter recipient number: ");
+        String rec = sc.nextLine();
+        boolean found = false;
+        for (Message msg : sentMessages) {
+            if (msg.getRecipient().equals(rec)) {
+                System.out.println("Message: " + msg.getText());
+                found = true;
+            }
+        }
+        if (!found) System.out.println("No messages found for this recipient.");
+    }
+
+    static void deleteByHash(Scanner sc) {
+        System.out.print("Enter message hash to delete: ");
+        String hash = sc.nextLine();
+        Iterator<Message> iter = sentMessages.iterator();
+        while (iter.hasNext()) {
+            Message msg = iter.next();
+            if (msg.getHash().equals(hash)) {
+                iter.remove();
+                System.out.println("Message deleted.");
+                return;
+            }
+        }
+        System.out.println("Message hash not found.");
+    }
+
+    static void displayReport() {
+        System.out.println("Sent Messages Report:");
+        for (Message msg : sentMessages) {
+            System.out.println("ID: " + msg.getId());
+            System.out.println("Recipient: " + msg.getRecipient());
+            System.out.println("Message: " + msg.getText());
+            System.out.println("Hash: " + msg.getHash());
+            System.out.println("--------------------------");
+        }
+    }
+
+    static String sha256(String input) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] hashBytes = md.digest(input.getBytes());
+            StringBuilder hex = new StringBuilder();
+            for (byte b : hashBytes)
+                hex.append(String.format("%02x", b));
+            return hex.toString();
+        } catch (Exception e) {
+            return "HashError";
+        }
+    }
+}
+}
+   
